@@ -58,6 +58,7 @@ func StringSliceVar(p *[]string, name string, value []string, usage string) {
 // and usage string. The argument p points to a string variable in which to
 // store the value of the flag.
 func StringSliceVarFS(f *flag.FlagSet, p *[]string, name string, value []string, usage string) {
+	*p = append([]string{}, *p...)
 	s := &stringSlice{s: p, l: &sync.Mutex{}}
 	if value != nil {
 		*s.s = append(*s.s, value...)
