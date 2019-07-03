@@ -28,11 +28,20 @@ aliases:
         - "/go/pkg/mod"
 jobs:
 
+  hacks:
+    executor: golang
+    steps:
+      - checkout
+      - run:
+          name: Update PATH and Define Environment Variable at Runtime
+          command: |
+            echo 'export CIRCLE_SHA1_SHORT="$(echo "$CIRCLE_SHA1" | cut -c -7)"' >> $BASH_ENV
+            source $BASH_ENV
+
   modules:
     executor: golang
     steps:
       - checkout
-      - run: cci-export CIRCLE_SHA1_SHORT "$(echo "$CIRCLE_SHA1" | cut -c -7)"
       - *restore_mod_cache
       - run: go mod download
       - *save_mod_cache
@@ -92,6 +101,7 @@ workflows:
   version: 2
   test:
     jobs:
+      - hacks
       - modules
       - test:
           requires:
