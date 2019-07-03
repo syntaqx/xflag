@@ -1,8 +1,8 @@
 # xflag
 
-[![GoDoc](https://godoc.org/syntaqx/xflag?status.svg)](https://godoc.org/syntaqx/xflag)
-[![Go Report Card](https://goreportcard.com/badge/syntaqx/xflag)](https://goreportcard.com/report/syntaqx/xflag)
+[![GoDoc](https://godoc.org/github.com/syntaqx/xflag?status.svg)](https://godoc.org/github.com/syntaqx/xflag)
 [![CircleCI](https://circleci.com/gh/syntaqx/xflag.svg?style=shield)](https://circleci.com/gh/syntaqx/xflag)
+[![Go Report Card](https://goreportcard.com/badge/syntaqx/xflag)](https://goreportcard.com/report/syntaqx/xflag)
 [![Coverage Status](https://coveralls.io/repos/github/syntaqx/xflag/badge.svg?branch=master)](https://coveralls.io/github/syntaqx/xflag?branch=master)
 
 Package xflag defines custom flags for since stdlib didn't.
