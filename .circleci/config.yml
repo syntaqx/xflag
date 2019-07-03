@@ -9,6 +9,7 @@ executors:
     environment:
       DOCKER_BUILDKIT: "1"
       IMAGE_NAME: syntaqx/xflag
+
 aliases:
 - &setup_remote_docker
     setup_remote_docker:
@@ -28,7 +29,7 @@ aliases:
         - "/go/pkg/mod"
 jobs:
 
-  hacks:
+  cifix:
     executor: golang
     steps:
       - checkout
@@ -101,18 +102,23 @@ workflows:
   version: 2
   test:
     jobs:
-      - hacks
+      - cifix
       - modules
       - test:
           requires:
+            - cifix
             - modules
       - lint:
           requires:
+            - cifix
             - modules
   build_and_deploy:
     jobs:
+      - cifix
       - build:
           context: docker-hub
+          requires:
+            - cifix
       - publish-latest:
           context: docker-hub
           requires:
