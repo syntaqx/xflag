@@ -3,6 +3,7 @@ executors:
   golang:
     docker:
       - image: syntaqx/ci-golang
+
 aliases:
 - &restore_mod_cache
     restore_cache:
@@ -14,6 +15,7 @@ aliases:
       paths:
         - "/go/pkg/mod"
 jobs:
+
   modules:
     executor: golang
     steps:
@@ -21,6 +23,7 @@ jobs:
       - *restore_mod_cache
       - run: go mod download
       - *save_mod_cache
+
   lint:
     docker:
       - image: golangci/golangci-lint
@@ -28,6 +31,7 @@ jobs:
       - checkout
       - *restore_mod_cache
       - run: golangci-lint run
+
   test:
     executor: golang
     steps:
@@ -42,6 +46,7 @@ jobs:
           destination: raw-test-output
       - store_test_results:
           path: /tmp/test-results
+
 workflows:
   version: 2
   test:
