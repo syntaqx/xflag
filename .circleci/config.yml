@@ -3,21 +3,7 @@ executors:
   golang:
     docker:
       - image: syntaqx/ci-golang
-  docker-publisher:
-    docker:
-      - image: circleci/buildpack-deps:19.04
-    environment:
-      DOCKER_BUILDKIT: "1"
-      IMAGE_NAME: syntaqx/xflag
-
 aliases:
-- &setup_remote_docker
-    setup_remote_docker:
-      version: 18.09.3
-- &docker_login
-    run:
-      name: Login to Docker registry
-      command: echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
 - &restore_mod_cache
     restore_cache:
       keys:
@@ -28,7 +14,6 @@ aliases:
       paths:
         - "/go/pkg/mod"
 jobs:
-
   modules:
     executor: golang
     steps:
@@ -36,7 +21,6 @@ jobs:
       - *restore_mod_cache
       - run: go mod download
       - *save_mod_cache
-
   lint:
     docker:
       - image: golangci/golangci-lint
@@ -44,52 +28,20 @@ jobs:
       - checkout
       - *restore_mod_cache
       - run: golangci-lint run
-
   test:
     executor: golang
     steps:
       - checkout
       - *restore_mod_cache
       - run: |
-          trap "go-junit-report <${TEST_RESULTS}/go-test.out > ${TEST_RESULTS}/go-test-report.xml" EXIT
-          go test -v -race -coverprofile=/tmp/coverage.out -covermode=atomic ./... | tee ${TEST_RESULTS}/go-test.out
-      - run: goveralls -coverprofile=/tmp/coverage.out -service=circle-ci -repotoken $COVERALLS_TOKEN
+          trap "go-junit-report </tmp/test-results/go-test.out > /tmp/test-results/go-test-report.xml" EXIT
+          go test -v -race -coverprofile=/tmp/coverage.out -covermode=atomic ./... | tee /tmp/test-results/go-test.out
+          goveralls -coverprofile=/tmp/coverage.out -service=circle-ci -repotoken $COVERALLS_TOKEN
       - store_artifacts:
           path: /tmp/test-results
           destination: raw-test-output
       - store_test_results:
           path: /tmp/test-results
-
-  build:
-    executor: docker-publisher
-    steps:
-      - checkout
-      - *setup_remote_docker
-      - *docker_login
-      - run:
-          name: Build Docker image
-          command: |
-            TAG="$(git rev-parse HEAD | cut -c 1-6)"
-            docker build --progress=plain -t $IMAGE_NAME:$TAG .
-            docker push $IMAGE_NAME:$CIRCLE_BUILD_NUM
-
-  publish-latest:
-    executor: docker-publisher
-    steps:
-      - attach_workspace:
-          at: /tmp/workspace
-      - *setup_remote_docker
-      - *docker_login
-      - run:
-          name: Load archived Docker image
-          command: docker load -i /tmp/workspace/image.tar
-      - run:
-          name: Public Docker image as latest
-          command: |
-            TAG="$(git rev-parse HEAD | cut -c 1-6)"
-            docker tag $IMAGE_NAME:$TAG $IMAGE_NAME:latest
-            docker push $IMAGE_NAME:latest
-
 workflows:
   version: 2
   test:
@@ -101,12 +53,3 @@ workflows:
       - lint:
           requires:
             - modules
-  build_and_deploy:
-    jobs:
-      - build:
-          context: docker-hub
-      - publish-latest:
-          context: docker-hub
-          filters:
-            branches:
-              only: master
