@@ -29,16 +29,6 @@ aliases:
         - "/go/pkg/mod"
 jobs:
 
-  cifix:
-    executor: golang
-    steps:
-      - checkout
-      - run:
-          name: Update PATH and Define Environment Variable at Runtime
-          command: |
-            echo 'export CIRCLE_SHA1_SHORT="$(echo "$CIRCLE_SHA1" | cut -c -7)"' >> $BASH_ENV
-            source $BASH_ENV
-
   modules:
     executor: golang
     steps:
@@ -79,8 +69,9 @@ jobs:
       - run:
           name: Build Docker image
           command: |
-            docker build --progress=plain -t $IMAGE_NAME:$CIRCLE_SHA1_SHORT .
-            docker push $IMAGE_NAME:$CIRCLE_SHA1_SHORT
+            TAG="$(git rev-parse HEAD | cut -c 1-6)"
+            docker build --progress=plain -t $IMAGE_NAME:$TAG .
+            docker push $IMAGE_NAME:$CIRCLE_BUILD_NUM
 
   publish-latest:
     executor: docker-publisher
@@ -95,34 +86,27 @@ jobs:
       - run:
           name: Public Docker image as latest
           command: |
-            docker tag $IMAGE_NAME:$CIRCLE_SHA1_SHORT $IMAGE_NAME:latest
+            TAG="$(git rev-parse HEAD | cut -c 1-6)"
+            docker tag $IMAGE_NAME:$TAG $IMAGE_NAME:latest
             docker push $IMAGE_NAME:latest
 
 workflows:
   version: 2
   test:
     jobs:
-      - cifix
       - modules
       - test:
           requires:
-            - cifix
             - modules
       - lint:
           requires:
-            - cifix
             - modules
   build_and_deploy:
     jobs:
-      - cifix
       - build:
           context: docker-hub
-          requires:
-            - cifix
       - publish-latest:
           context: docker-hub
-          requires:
-            - build
           filters:
             branches:
               only: master
