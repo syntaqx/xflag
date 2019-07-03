@@ -3,6 +3,8 @@ executors:
   golang:
     docker:
       - image: syntaqx/ci-golang
+    environment:
+      GO111MODULE: "on"
 
 aliases:
 - &restore_mod_cache
@@ -14,8 +16,8 @@ aliases:
       key: go-mod-v1-{{ checksum "go.sum" }}
       paths:
         - "/go/pkg/mod"
-jobs:
 
+jobs:
   modules:
     executor: golang
     steps:
