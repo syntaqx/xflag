@@ -8,50 +8,48 @@ executors:
       - image: circleci/buildpack-deps:19.04
     environment:
       DOCKER_BUILDKIT: "1"
-      IMAGE_NAME: "$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME"
-
+      IMAGE_NAME: syntaqx/xflag
 aliases:
 - &setup_remote_docker
     setup_remote_docker:
       version: 18.09.3
-      docker_layer_caching: true
-- &dockerhub_login
+- &docker_login
     run:
-      name: Log in to Docker registry
+      name: Login to Docker registry
       command: echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-- &step_restore_mod_cache
+- &restore_mod_cache
     restore_cache:
       keys:
         - go-mod-v1-{{ checksum "go.sum" }}
-- &step_save_mod_cache
+- &save_mod_cache
     save_cache:
       key: go-mod-v1-{{ checksum "go.sum" }}
       paths:
         - "/go/pkg/mod"
-
 jobs:
 
   modules:
     executor: golang
     steps:
       - checkout
-      - *step_restore_mod_cache
+      - run: cci-export CIRCLE_SHA1_SHORT "$(echo "$CIRCLE_SHA1" | cut -c -7)"
+      - *restore_mod_cache
       - run: go mod download
-      - *step_save_mod_cache
+      - *save_mod_cache
 
   lint:
     docker:
       - image: golangci/golangci-lint
     steps:
       - checkout
-      - *step_restore_mod_cache
+      - *restore_mod_cache
       - run: golangci-lint run
 
   test:
     executor: golang
     steps:
       - checkout
-      - *step_restore_mod_cache
+      - *restore_mod_cache
       - run: |
           trap "go-junit-report <${TEST_RESULTS}/go-test.out > ${TEST_RESULTS}/go-test-report.xml" EXIT
           go test -v -race -coverprofile=/tmp/coverage.out -covermode=atomic ./... | tee ${TEST_RESULTS}/go-test.out
@@ -67,12 +65,12 @@ jobs:
     steps:
       - checkout
       - *setup_remote_docker
-      - *dockerhub_login
+      - *docker_login
       - run:
           name: Build Docker image
           command: |
-            docker build -t $IMAGE_NAME:${CIRCLE_SHA1:0:7} --progress=plain .
-            docker push $IMAGE_NAME:${CIRCLE_SHA1:0:7}
+            docker build --progress=plain -t $IMAGE_NAME:$CIRCLE_SHA1_SHORT .
+            docker push $IMAGE_NAME:$CIRCLE_SHA1_SHORT
 
   publish-latest:
     executor: docker-publisher
@@ -80,14 +78,14 @@ jobs:
       - attach_workspace:
           at: /tmp/workspace
       - *setup_remote_docker
-      - *dockerhub_login
+      - *docker_login
       - run:
           name: Load archived Docker image
           command: docker load -i /tmp/workspace/image.tar
       - run:
           name: Public Docker image as latest
           command: |
-            docker tag $IMAGE_NAME:${CIRCLE_SHA1:0:7} $IMAGE_NAME:latest
+            docker tag $IMAGE_NAME:$CIRCLE_SHA1_SHORT $IMAGE_NAME:latest
             docker push $IMAGE_NAME:latest
 
 workflows:
@@ -101,13 +99,10 @@ workflows:
       - lint:
           requires:
             - modules
-  build:
+  build_and_deploy:
     jobs:
       - build:
           context: docker-hub
-          filters:
-            tags:
-              only: /^v.*/
       - publish-latest:
           context: docker-hub
           requires:
