@@ -2,7 +2,7 @@ version: 2.1
 executors:
   golang:
     docker:
-      - image: syntaqx/ci-golang
+      - image: syntaqx/ci
     environment:
       GO111MODULE: "on"
 
